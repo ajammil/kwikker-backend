@@ -1,20 +1,20 @@
 import pytest
 from . import actions
 from database_manager import db_manager
-from models import User, Mention, Hashtag, Kweek
+from models import User, Mention, Hashtag, Kweek, RekweekInfo
 from datetime import datetime
 
 db_manager.initialize_connection('kwikker', 'postgres', '')
 
 
 def test_insert_kweek():
-    kweek_test = Kweek({
+    kweek_test_1 = Kweek({
         'id': 0,
         'created_at': datetime.utcnow(),
-        'text': '#testtest',
+        'text': '#test1',
         'media_url': None,
         'user': User({
-            'username': 'test_user1',
+            'username': 'user1',
             'screen_name': 'test1',
             'profile_image_url': 'image_url',
             'following': False,
@@ -24,16 +24,16 @@ def test_insert_kweek():
         }),
         'mentions': [
             Mention({
-                'username': 'test_user1',
+                'username': 'user1',
                 'indices': [10, 16]}),
             Mention({
-                'username': 'test_user2',
+                'username': 'user2',
                 'indices': [18, 20]},
             )
         ],
         'hashtags': [
             Hashtag({
-                'text': '#moon',
+                'text': '#sky',
                 'indices': [10, 16],
                 'id': 0
             })
@@ -49,10 +49,10 @@ def test_insert_kweek():
     kweek_test_2 = Kweek({
         'id': 0,
         'created_at': datetime.utcnow(),
-        'text': '#testtest',
+        'text': '#test2',
         'media_url': None,
         'user': User({
-            'username': 'test_user1',
+            'username': 'user1',
             'screen_name': 'test1',
             'profile_image_url': 'image_url',
             'following': False,
@@ -70,7 +70,7 @@ def test_insert_kweek():
         ],
         'hashtags': [
             Hashtag({
-                'text': '#moon',
+                'text': '#sky',
                 'indices': [10, 16],
                 'id': 0
             })
@@ -83,9 +83,95 @@ def test_insert_kweek():
         'liked_by_user': False,
         'rekweeked_by_user': False
     })
+    kweek_test_3 = Kweek({
+        'id': 0,
+        'created_at': datetime.utcnow(),
+        'text': '#test3',
+        'media_url': None,
+        'user': User({
+            'username': 'user1',
+            'screen_name': 'test1',
+            'profile_image_url': 'image_url',
+            'following': False,
+            'follows_you': False,
+            'muted': False,
+            'blocked': False
+        }),
+        'mentions': [
+            Mention({
+                'username': 'user1',
+                'indices': [10, 16]}),
+            Mention({
+                'username': 'user1',
+                'indices': [18, 20]},
+            )
+        ],
+        'hashtags': [
+            Hashtag({
+                'text': '#sky',
+                'indices': [10, 16],
+                'id': 0
+            })
+        ],
+        'number_of_likes': 0,
+        'number_of_rekweeks': 0,
+        'number_of_replies': 0,
+        'reply_to': None,
+        'rekweek_info': None,
+        'liked_by_user': False,
+        'rekweeked_by_user': False
+    })
+    kweek_test_4 = Kweek({
+        'id': 0,
+        'created_at': datetime.utcnow(),
+        'text': '#test1',
+        'media_url': None,
+        'user': User({
+            'username': 'user1',
+            'screen_name': 'test1',
+            'profile_image_url': 'image_url',
+            'following': False,
+            'follows_you': False,
+            'muted': False,
+            'blocked': False
+        }),
+        'mentions': [
+            Mention({
+                'username': 'user1',
+                'indices': [10, 16]}),
+            Mention({
+                'username': 'user5',
+                'indices': [18, 20]},
+            )
+        ],
+        'hashtags': [
+            Hashtag({
+                'text': '#sky',
+                'indices': [10, 16],
+                'id': 0
+            })
+        ],
+        'number_of_likes': 0,
+        'number_of_rekweeks': 0,
+        'number_of_replies': 0,
+        'reply_to': None,
+        'rekweek_info': None,
+        'liked_by_user': False,
+        'rekweeked_by_user': False
+    })
+    query: str = """SELECT ID FROM HASHTAG WHERE TEXT=%s  """
+    data = ('#sky',)
+    hid = db_manager.execute_query(query, data)
+    if len(hid) != 0:
+        query: str = """DELETE FROM HASHTAG WHERE ID=%s  """
+        data = (hid[0]['id'],)
+        db_manager.execute_query_no_return(query, data)
+        query: str = """DELETE FROM KWEEK_HASHTAG WHERE HASHTAG_ID=%s  """
+        data = (hid[0]['id'],)
+        db_manager.execute_query_no_return(query, data)
     query: str = """SELECT COUNT(*) FROM HASHTAG """
     first_count = db_manager.execute_query(query)[0]['count']
-    actions.insert_kweek(kweek_test)
+    actions.insert_kweek(kweek_test_1)
     query: str = """SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """
     kid = db_manager.execute_query(query)[0]['id']
     print("kweek id", kid)
@@ -106,56 +192,27 @@ def test_insert_kweek():
     print("hashtag", resulted_hashtag)
     expected_mention = {'kweek_id': kid, 'username': 'test_user1', 'starting_index': 10,
                         'ending_index': 16}
-    expected_hashtag = {'text': '#moon', 'kweek_id': kid, 'hashtag_id': hid,
+    expected_hahstag = {'text': '#sky', 'kweek_id': kid, 'hashtag_id': hid,
                         'starting_index': 10, 'ending_index': 16}
     expected_kweek = {'id': kid, 'text': '#testtest',
                       'media_url': None, 'username': 'test_user1', 'reply_to': None}
     assert expected_kweek == resulted_kweek
-    assert expected_hashtag == resulted_hashtag
+    assert expected_hahstag == resulted_hashtag
     assert expected_mention == resulted_mention
     query: str = """SELECT COUNT(*) FROM HASHTAG """
     second_count = db_manager.execute_query(query)[0]['count']
     assert (second_count - first_count) == 1
-    actions.insert_kweek(kweek_test_2)
+    check, message = actions.insert_kweek(kweek_test_2)
+    assert message == 'success'
     query: str = """SELECT COUNT(*) FROM HASHTAG """
     third_count = db_manager.execute_query(query)[0]['count']
     assert third_count - second_count == 0
+    check, message = actions.insert_kweek(kweek_test_3)
+    assert message == 'Repeated mention in the same kweek'
+    check, message = actions.insert_kweek(kweek_test_4)
+    assert message == 'the user mentioned does not exist in the database'
 
 
-@pytest.mark.parametrize("authorized_username,request_kweek, expected_output",
-                         [
-                             ('false_username', {
-                                 'text': "#first tweet",
-                                 'reply_to': None,
-                             }, (False, 'The authorized user does not exist in the data base')),
-                             ('test_user1', {
-                                 'text': "#first tweet",
-                                 'reply_to': None
-                             }, (True, 'success')),
-                             ('test_user1', {
-                                 'text': "#first tweet",
-                                 'reply_to': 0
-                             }, (False, 'Kweek does not exist ')),
-                             ('test_user1', {
-                                 'text': "#first tweet",
-                                 'reply_to': str(db_manager.execute_query
-                                                 ("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
-                             }, (True, 'success')),
-                             ('test_user1', {
-                                 'text': "",
-                                 'reply_to': str(db_manager.execute_query
-                                                 ("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
-                             }, (False, 'No text body found')),
-                             ('test_user1', {
-                                 'text': "  ",
-                                 'reply_to': str(db_manager.execute_query
-                                                 ("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
-                             }, (False, 'No text body found'))
-
-                         ])
-def test_create_kweek(authorized_username, request_kweek, expected_output):
-    check, message = actions.create_kweek(request_kweek, authorized_username)
-    assert (check, message) == expected_output
 
 
 @pytest.mark.parametrize("text, expected_hashtags, expected_mentions",
@@ -195,23 +252,7 @@ def test_extract_mentions_hashtags(text, expected_hashtags, expected_mentions):
         assert i.to_json() == expected_mentions[r].to_json()
 
 
-@pytest.mark.parametrize("parameter, expected_output",
-                         [
-                             ('-1',
-                              (False, 'Kweek is not available')),
-                             (str(db_manager.execute_query
-                                                     ("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id']),
-                              (True, 'success')),
-                             ('abc',
-                              (False, 'Invalid data type type'))
-                         ])
-def test_validate_request(parameter, expected_output):
-    check, message = actions.validate_request(parameter)
-    assert (check, message) == expected_output
-
-
 def test_delete_kweek():
-
     # first test -  first kweek#
 
     query: str = """INSERT INTO  KWEEK (CREATED_AT,TEXT,MEDIA_URL,USERNAME,REPLY_TO) VALUES(%s, %s, %s, %s,%s) """
@@ -451,7 +492,6 @@ def test_delete_kweek():
 
 
 def test_get_kweek():
-
     # first kweek #
 
     query: str = """INSERT INTO  KWEEK (CREATED_AT,TEXT,MEDIA_URL,USERNAME,REPLY_TO) VALUES(%s, %s, %s, %s,%s) """
@@ -460,11 +500,11 @@ def test_get_kweek():
     kid1 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
 
     query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
-    data = ('hashtag1',)
+    data = ('hashtag1-',)
     db_manager.execute_query_no_return(query, data)
 
     query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
-    data = ('hashtag1',)
+    data = ('hashtag1-',)
     hid1 = db_manager.execute_query(query, data)[0]['id']
 
     query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
@@ -473,12 +513,15 @@ def test_get_kweek():
 
     query: str = """INSERT INTO MENTION VALUES(%s,%s,%s,%s) """
     data = (kid1, 'test_user2', 10, 15)
+    db_manager.execute_query_no_return(query, data)
 
     query: str = """INSERT INTO REKWEEK VALUES(%s,%s,%s) """
     data = ('test_user2', kid1, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
 
     query: str = """INSERT INTO FAVORITE VALUES(%s,%s,%s) """
     data = ('test_user2', kid1, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
 
     # second kweek #
 
@@ -488,11 +531,11 @@ def test_get_kweek():
     kid2 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
 
     query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
-    data = ('hashtag2',)
+    data = ('hashtag2-',)
     db_manager.execute_query_no_return(query, data)
 
     query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
-    data = ('hashtag2',)
+    data = ('hashtag2-',)
     hid2 = db_manager.execute_query(query, data)[0]['id']
 
     query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
@@ -510,11 +553,11 @@ def test_get_kweek():
     kid3 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
 
     query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
-    data = ('hashtag3',)
+    data = ('hashtag3-',)
     db_manager.execute_query_no_return(query, data)
 
     query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
-    data = ('hashtag3',)
+    data = ('hashtag3-',)
     hid3 = db_manager.execute_query(query, data)[0]['id']
 
     query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
@@ -525,41 +568,238 @@ def test_get_kweek():
     data = ('test_user3', kid3, '01-01-2010')
 
     # first output #
+
     kweek_test1 = Kweek({
-        'id': kid1,
-        'created_at': '01-01-2010',
+        'id': int(kid1),
+        'created_at': datetime(2010, 1, 1, 0, 0),
         'text': 'test1',
         'media_url': None,
         'user': User({
             'username': 'test_user1',
             'screen_name': 'test1',
             'profile_image_url': 'image_url',
-            'following': False,
-            'follows_you': False,
+            'following': True,
+            'follows_you': True,
             'muted': False,
             'blocked': False
         }),
         'mentions': [
             Mention({
-                'username': 'test_user1',
-                'indices': [10, 16]}),
-            Mention({
                 'username': 'test_user2',
-                'indices': [18, 20]},
-            )
+                'indices': [10, 15]})
+
         ],
         'hashtags': [
             Hashtag({
-                'text': '#moon',
-                'indices': [10, 16],
-                'id': 0
+                'text': 'hashtag1-',
+                'indices': [0, 9],
+                'id': hid1
             })
         ],
-        'number_of_likes': 0,
-        'number_of_rekweeks': 0,
-        'number_of_replies': 0,
+        'number_of_likes': 1,
+        'number_of_rekweeks': 1,
+        'number_of_replies': 2,
         'reply_to': None,
         'rekweek_info': None,
         'liked_by_user': False,
         'rekweeked_by_user': False
     })
+
+    check_replies, message, k, r = actions.get_kweek(kid1, 'test_user3')
+    print('kwweeek')
+    print(k)
+    print('replies')
+    print(r)
+    assert check_replies == True
+    assert message == 'success'
+    assert k.to_json() == kweek_test1.to_json()
+    assert [{'id': int(kid2)}, {'id': int(kid3)}] == r
+
+
+def test_get_kweek_with_replies():
+    # first kweek #
+
+    query: str = """INSERT INTO  KWEEK (CREATED_AT,TEXT,MEDIA_URL,USERNAME,REPLY_TO) VALUES(%s, %s, %s, %s,%s) """
+    data = ('01-01-2010', 'test1', None, 'test_user1', None)
+    db_manager.execute_query_no_return(query, data)
+    kid1 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
+
+    query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
+    data = ('hashtag1---',)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
+    data = ('hashtag1---',)
+    hid1 = db_manager.execute_query(query, data)[0]['id']
+
+    query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
+    data = (kid1, hid1, 0, 9,)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """INSERT INTO MENTION VALUES(%s,%s,%s,%s) """
+    data = (kid1, 'test_user2', 10, 15)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """INSERT INTO REKWEEK VALUES(%s,%s,%s) """
+    data = ('test_user2', kid1, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """INSERT INTO FAVORITE VALUES(%s,%s,%s) """
+    data = ('test_user2', kid1, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
+
+    # second kweek #
+
+    query: str = """INSERT INTO  KWEEK (CREATED_AT,TEXT,MEDIA_URL,USERNAME,REPLY_TO) VALUES(%s, %s, %s, %s,%s) """
+    data = ('01-01-2010', 'test2', None, 'test_user2', kid1)
+    db_manager.execute_query_no_return(query, data)
+    kid2 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
+
+    query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
+    data = ('hashtag2---',)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
+    data = ('hashtag2---',)
+    hid2 = db_manager.execute_query(query, data)[0]['id']
+
+    query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
+    data = (kid2, hid2, 0, 9,)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """INSERT INTO FAVORITE VALUES(%s,%s,%s) """
+    data = ('test_user1', kid2, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
+
+    # third kweek #
+
+    query: str = """INSERT INTO  KWEEK (CREATED_AT,TEXT,MEDIA_URL,USERNAME,REPLY_TO) VALUES(%s, %s, %s, %s,%s) """
+    data = ('01-01-2010', 'test3', None, 'test_user3', kid1)
+    db_manager.execute_query_no_return(query, data)
+    kid3 = str(db_manager.execute_query("""SELECT ID FROM KWEEK ORDER BY ID DESC LIMIT 1 """)[0]['id'])
+
+    query: str = """INSERT INTO HASHTAG(TEXT) VALUES (%s) """
+    data = ('hashtag3---',)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """SELECT ID FROM HASHTAG WHERE TEXT = %s """
+    data = ('hashtag3---',)
+    hid3 = db_manager.execute_query(query, data)[0]['id']
+
+    query: str = """INSERT INTO KWEEK_HASHTAG VALUES (%s,%s,%s,%s)"""
+    data = (kid3, hid3, 0, 9,)
+    db_manager.execute_query_no_return(query, data)
+
+    query: str = """INSERT INTO FAVORITE VALUES(%s,%s,%s) """
+    data = ('test_user3', kid3, '01-01-2010')
+    db_manager.execute_query_no_return(query, data)
+
+    kweek_test1 = Kweek({
+        'id': int(kid1),
+        'created_at': datetime(2010, 1, 1, 0, 0),
+        'text': 'test1',
+        'media_url': None,
+        'user': User({
+            'username': 'test_user1',
+            'screen_name': 'test1',
+            'profile_image_url': 'image_url',
+            'following': True,
+            'follows_you': True,
+            'muted': False,
+            'blocked': False
+        }),
+        'mentions': [
+            Mention({
+                'username': 'test_user2',
+                'indices': [10, 15]})
+
+        ],
+        'hashtags': [
+            Hashtag({
+                'text': 'hashtag1---',
+                'indices': [0, 9],
+                'id': hid1
+            })
+        ],
+        'number_of_likes': 1,
+        'number_of_rekweeks': 1,
+        'number_of_replies': 2,
+        'reply_to': None,
+        'rekweek_info': None,
+        'liked_by_user': False,
+        'rekweeked_by_user': False
+    })
+    replies_test1 = [
+        Kweek({
+            'id': int(kid2),
+            'created_at': datetime(2010, 1, 1, 0, 0),
+            'text': 'test2',
+            'media_url': None,
+            'user': User({
+                'username': 'test_user2',
+                'screen_name': 'test2',
+                'profile_image_url': 'image_url',
+                'following': False,
+                'follows_you': True,
+                'muted': False,
+                'blocked': False
+            }),
+            'mentions': [
+            ],
+            'hashtags': [
+                Hashtag({
+                    'text': 'hashtag2---',
+                    'indices': [0, 9],
+                    'id': hid2
+                })
+            ],
+            'number_of_likes': 1,
+            'number_of_rekweeks': 0,
+            'number_of_replies': 0,
+            'reply_to': int(kid1),
+            'rekweek_info': None,
+            'liked_by_user': False,
+            'rekweeked_by_user': False
+        }), Kweek({
+            'id': int(kid3),
+            'created_at': datetime(2010, 1, 1, 0, 0),
+            'text': 'test3',
+            'media_url': None,
+            'user': User({
+                'username': 'test_user3',
+                'screen_name': 'test3',
+                'profile_image_url': 'image_url',
+                'following': False,
+                'follows_you': False,
+                'muted': False,
+                'blocked': False
+            }),
+            'mentions': [
+            ],
+            'hashtags': [
+                Hashtag({
+                    'text': 'hashtag3---',
+                    'indices': [0, 9],
+                    'id': hid3
+                })
+            ],
+            'number_of_likes': 1,
+            'number_of_rekweeks': 0,
+            'number_of_replies': 0,
+            'reply_to': int(kid1),
+            'rekweek_info': None,
+            'liked_by_user': True,
+            'rekweeked_by_user': False
+        }),
+
+    ]
+    check_replies, message, k, r = actions.get_kweek_with_replies(kid1, 'test_user3')
+    print('kwweeek')
+    print(k)
+    print('replies')
+    print(r)
+    assert True == check_replies
+    assert message == 'success'
+    assert k.to_json() == kweek_test1.to_json()
+    for n, i in enumerate(r):
+        assert i.to_json() == replies_test1[n].to_json()
