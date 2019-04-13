@@ -8,7 +8,7 @@ before_install:
 
 script:
 #tests will be here
-
+  - gem install bundler
 
 after_success:
   #Log in to docker hub
