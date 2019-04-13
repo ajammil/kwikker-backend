@@ -11,7 +11,9 @@ WORKDIR /app
 RUN pip3 install -r requirements.txt
 
 COPY . /app
-
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+ENV LANGUAGE=C.UTF-8
 EXPOSE 5000
-CMD app.py
+CMD python3 run.py --env=production
 
